@@ -1,1 +1,1 @@
-# Syst-me-Embarqu-s-groupe-2-
+# Système Embarqués - Groupe 2
