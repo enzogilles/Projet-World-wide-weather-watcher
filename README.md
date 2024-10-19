@@ -1,1 +1,1 @@
-# Système Embarqués - Groupe 2
+# Système Embarqués - Groupe 6
