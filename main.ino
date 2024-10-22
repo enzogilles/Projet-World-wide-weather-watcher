@@ -60,3 +60,114 @@ void Mode_standard(){
     // 
     // 
 }
+
+
+void Mode_configuration() {
+    setLedcolor(ledPin, 255, 255, 0);  // LED jaune pour signaler le mode configuration
+    Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
+    Serial.println("1: LOG_INTERVAL");
+    Serial.println("2: FILE_MAX_SIZE");
+    Serial.println("3: TIMEOUT");
+    Serial.println("4: LUMIN");
+    Serial.println("5: LUMIN_LOW");
+    Serial.println("6: LUMIN_HIGH");
+    Serial.println("7: Configurer le timeout des capteurs");
+
+    while (Serial.available() == 0) {}
+
+    int commande = Serial.parseInt();  // Lire la commande utilisateur
+
+    switch (commande) {
+        case 1:
+            Serial.println("Entrez la nouvelle valeur pour LOG_INTERVAL (en minutes) :");
+            while (Serial.available() == 0) {}
+            LOG_INTERVAL = Serial.parseInt();
+            EEPROM.put(0, LOG_INTERVAL);  // Enregistrer dans l'EEPROM à l'adresse 0
+            Serial.print("LOG_INTERVAL mis à jour à : ");
+            Serial.println(LOG_INTERVAL);
+            break;
+
+        case 2:
+            Serial.println("Entrez la nouvelle valeur pour FILE_MAX_SIZE (en Ko) :");
+            while (Serial.available() == 0) {}
+            FILE_MAX_SIZE = Serial.parseInt();
+            EEPROM.put(4, FILE_MAX_SIZE);  // Adresse différente dans l'EEPROM
+            Serial.print("FILE_MAX_SIZE mis à jour à : ");
+            Serial.println(FILE_MAX_SIZE);
+            break;
+
+        case 3:
+            Serial.println("Entrez la nouvelle valeur pour TIMEOUT (en secondes) :");
+            while (Serial.available() == 0) {}
+            TIMEOUT = Serial.parseInt();
+            EEPROM.put(8, TIMEOUT);  // Adresse suivante dans l'EEPROM
+            Serial.print("TIMEOUT mis à jour à : ");
+            Serial.println(TIMEOUT);
+            break;
+
+        case 4:
+            Serial.println("Activer (1) ou désactiver (0) LUMIN :");
+            while (Serial.available() == 0) {}
+            LUMIN = Serial.parseInt();
+            EEPROM.put(12, LUMIN);
+            Serial.print("LUMIN mis à jour à : ");
+            Serial.println(LUMIN);
+            break;
+
+        case 5:
+            Serial.println("Entrez une nouvelle valeur pour LUMIN_LOW :");
+            while (Serial.available() == 0) {}
+            LUMIN_LOW = Serial.parseInt();
+            EEPROM.put(16, LUMIN_LOW);
+            Serial.print("LUMIN_LOW mis à jour à : ");
+            Serial.println(LUMIN_LOW);
+            break;
+
+        case 6:
+            Serial.println("Entrez une nouvelle valeur pour LUMIN_HIGH :");
+            while (Serial.available() == 0) {}
+            LUMIN_HIGH = Serial.parseInt();
+            EEPROM.put(20, LUMIN_HIGH);
+            Serial.print("LUMIN_HIGH mis à jour à : ");
+            Serial.println(LUMIN_HIGH);
+            break;
+
+        default:
+            Serial.println("Commande non reconnue");
+            break;
+    }
+}
+
+void checkSensors() {
+    int sensorPin = A0;  // Exemple de broche pour un capteur
+    int retries = 0;
+    bool sensorError = false;
+
+    while (retries < 2) {  // Utilisez le nombre de tentatives défini
+        Serial.print("Lecture du capteur (tentative ");
+        Serial.print(retries + 1);
+        Serial.println(")...");
+
+        long startTime = millis();
+        int data = readSensorData(sensorPin);  // Lire les données du capteur
+
+        // Vérifier si la lecture a réussi
+        if (data != -1) {
+            Serial.print("Données du capteur : ");
+            Serial.println(data);
+            break;  // Sortir de la boucle si la lecture a réussi
+        }
+
+        // Vérification du timeout
+        if (millis() - startTime > TIMEOUT * 1000) {
+            Serial.println("Timeout lors de la lecture du capteur !");
+            retries++;
+        }
+    }
+
+    // Si nous avons épuisé les tentatives sans succès
+    if (retries >= 2) {
+        sensorError = true;
+        Serial.println("Erreur : Le capteur ne répond pas après plusieurs tentatives.");
+    }
+}
