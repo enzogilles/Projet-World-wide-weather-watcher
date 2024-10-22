@@ -9,7 +9,7 @@
 #define boutonRouge 2
 #define boutonVert 3
 #define capteurs[10] {5,6,7,8,9}
-#define carteSD 11
+#define carteSD 10
  
 
 // Données RTC
