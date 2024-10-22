@@ -10,7 +10,8 @@
 #define boutonVert 3
 #define capteurs[10] {5,6,7,8,9}
 #define carteSD 4
- 
+
+
 
 // Données RTC
 int heure = 0, minute = 0, seconde = 0;
@@ -58,29 +59,46 @@ void Mode_standard(){
     // 
 }
 
+volatile long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
+
 void Mode_maintenance() {
-    setLedcolor(ledPin,255,123,0);
-    if (taille_fichier <= 2000) { // Condition taille du fichier, Lecture des capteurs avec l'assignation des pins
+    setLedcolor(ledPin, 255, 123, 0);  // LED ORANGE
+
+    // Vérification de la taille du fichier
+    if (taille_fichier <= 2000) {
+        Serial.println("Mode maintenance activé.");
+
+      
+        attachInterrupt(digitalPinToInterrupt(boutonRouge), appuiRouge, RISING);
+        attachInterrupt(digitalPinToInterrupt(boutonRouge), relacheRouge, FALLING);
+
         while (1) {
-            // Lecture des capteurs
-            pression = analogRead(5);
-            temperature_air = analogRead(6);
-            hygrometrie = analogRead(7);
+            // Lecture des capteurs (assignation des pins capteurs)
+            int pression = analogRead(5);
+            int temperature_air = analogRead(6);
+            int hygrometrie = analogRead(7);
 
-            // Affichage des données sur le port série (Pression, Température, Hygrométrie)
+            // Affichage des valeurs des capteurs dans la console série
+            Serial.print("La pression actuelle est: ");
+            Serial.println(pression);
+            delay(2500);
 
-           
-                                             // Interruption pour retirer le mode "Maintenance" \\ 
-           
-           
-            // Lire l'état du bouton rouge (High ou Low) 
-            // Si état du bouton = high --> compteur de 5 secondes$
-            // Ecrire un message préventif pour la carte SD (éviter la corruption)
-            // Au bout de 5 secondes --> Arrêter le mode maintenance
-            // Basculer de mode
+            Serial.print("La température de l'air est: ");
+            Serial.println(temperature_air);
+            delay(2500);
+
+            Serial.print("L'hygrométrie actuelle est: ");
+            Serial.println(hygrometrie);
+            delay(2500);
         }
-    }
-}   
+    } 
+
+
+
+
+
+
+
 
 void Mode_Economie() {
     setLedcolor(ledPin,0,0,255);
@@ -110,23 +128,23 @@ void Mode_configuration() {
    // ...
 } 
 
-void appuiRouge(){
-	temps_appui_rouge=millis();
-    // Enregistre le temps à l'instant où le bouton est pressé
-}
+    void appuiRouge(){
+        temps_appui_rouge=millis();
+        // Enregistre le temps à l'instant où le bouton est pressé
+    }
 
-void relacheRouge(){
-  if (millis()-temps_appui_rouge>=5000)
-  {
-    Mode_maintenance();
-    // Si pressé pendant 5 sec --> Mode maintenance
-  }
-  else{
-    Mode_configuration();
-    // Sinon --> Mode configuration
-  }
-  temps_appui_rouge=millis();
-}
+    void relacheRouge(){
+    if (millis()-temps_appui_rouge>=5000)
+    {
+        Mode_maintenance();
+        // Si pressé pendant 5 sec --> Mode maintenance
+    }
+    else{
+        Mode_configuration();
+        // Sinon --> Mode configuration
+    }
+    temps_appui_rouge=millis();
+    }
 
 
 
