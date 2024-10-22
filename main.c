@@ -9,7 +9,7 @@
 #define boutonRouge 2
 #define boutonVert 3
 #define capteurs[10] {5,6,7,8,9}
-#define carteSD 11
+#define carteSD 4
  
 
 // Données RTC
@@ -145,10 +145,13 @@ void relacheVert(){
 }
 
 void init_interruption(){
-    attachInterrupt(digitalPinToInterrupt(boutonRouge),appuiRouge,RISING);
-    attachInterrupt(digitalPinToInterrupt(boutonRouge),relacheRouge,FALLING);
-    attachInterrupt(digitalPinToInterrupt(boutonVert),appuiVert,RISING);
-    attachInterrupt(digitalPinToInterrupt(boutonVert),relacheVert,FALLING);
+    // Le RISING va enregistrer le temps d'appui.
+    // Le FALLING changera de mode en fonction du temps d'appui une fois relâché.
+
+    attachInterrupt(digitalPinToInterrupt(boutonRouge),appuiRouge,RISING);      // Enregistre le temps d'appui du bouton rouge.
+    attachInterrupt(digitalPinToInterrupt(boutonRouge),relacheRouge,FALLING);   // Change de mode en fonction du temps d'appui une fois le bouton rouge relâché (Configuration si moins de 5s, Maintenance si au moins 5s).
+    attachInterrupt(digitalPinToInterrupt(boutonVert),appuiVert,RISING);        // Enregistre le temps d'appui du bouton vert.
+    attachInterrupt(digitalPinToInterrupt(boutonVert),relacheVert,FALLING);     // Change de mode en fonction du temps d'appui une fois le bouton vert relâché (Économie si au moins 5s).
 
 }
 
