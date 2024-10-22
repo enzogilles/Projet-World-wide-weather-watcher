@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h> 
 #include <time.h>
+#include <EEPROM.h>
+#include <RTClib.h> 
 
 // Déclaration des variables globales (permet de définir le branchement de l'élement concerné)
 
@@ -71,7 +73,8 @@ void Mode_configuration() {
     Serial.println("4: LUMIN");
     Serial.println("5: LUMIN_LOW");
     Serial.println("6: LUMIN_HIGH");
-    Serial.println("7: Configurer le timeout des capteurs");
+    Serial.println("7: RESET");
+    Serial.println("8: VERSION");
 
     while (Serial.available() == 0) {}
 
@@ -132,6 +135,14 @@ void Mode_configuration() {
             Serial.println(LUMIN_HIGH);
             break;
 
+        case 7: // Réinitialisation
+            resetParameters();
+            break;
+
+        case 8: // Affichage de la version
+            displayVersion();
+            break;
+
         default:
             Serial.println("Commande non reconnue");
             break;
@@ -171,3 +182,5 @@ void checkSensors() {
         Serial.println("Erreur : Le capteur ne répond pas après plusieurs tentatives.");
     }
 }
+
+
