@@ -64,6 +64,45 @@ void Mode_standard(){
 }
 
 
+
+volatile long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
+
+void Mode_maintenance() {
+    setLedcolor(ledPin, 255, 123, 0);  // LED ORANGE
+
+    // Vérification de la taille du fichier
+    if (taille_fichier <= 2000) {
+        Serial.println("Mode maintenance activé.");
+
+      
+        attachInterrupt(digitalPinToInterrupt(boutonRouge), appuiRouge, RISING);
+        attachInterrupt(digitalPinToInterrupt(boutonRouge), relacheRouge, FALLING);
+
+        while (1) {
+            // Lecture des capteurs (assignation des pins capteurs)
+            int pression = analogRead(5);
+            int temperature_air = analogRead(6);
+            int hygrometrie = analogRead(7);
+
+            // Affichage des valeurs des capteurs dans la console série
+            Serial.print("La pression actuelle est: ");
+            Serial.println(pression);
+            delay(2500);
+
+            Serial.print("La température de l'air est: ");
+            Serial.println(temperature_air);
+            delay(2500);
+
+            Serial.print("L'hygrométrie actuelle est: ");
+            Serial.println(hygrometrie);
+            delay(2500);
+        }
+    } 
+
+
+
+
+
 void Mode_configuration() {
     setLedcolor(ledPin, 255, 255, 0);  // LED jaune pour signaler le mode configuration
     Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
