@@ -64,19 +64,12 @@ void Mode_standard(){
 }
 
 
-
-volatile long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
-
 void Mode_maintenance() {
     setLedcolor(ledPin, 255, 123, 0);  // LED ORANGE
 
     // Vérification de la taille du fichier
     if (taille_fichier <= 2000) {
         Serial.println("Mode maintenance activé.");
-
-      
-        attachInterrupt(digitalPinToInterrupt(boutonRouge), appuiRouge, RISING);
-        attachInterrupt(digitalPinToInterrupt(boutonRouge), relacheRouge, FALLING);
 
         while (1) {
             // Lecture des capteurs (assignation des pins capteurs)
@@ -99,10 +92,6 @@ void Mode_maintenance() {
         }
     } 
 } 
-
-
-
-
 
 void Mode_configuration() {
     setLedcolor(ledPin, 255, 255, 0);  // LED jaune pour signaler le mode configuration
@@ -224,3 +213,47 @@ void checkSensors() {
 }
 
 
+volatile long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
+
+void appuiRouge(){
+    temps_appui_rouge=millis();
+}
+
+void relacheRouge(){
+if (millis()-temps_appui_rouge>=5000)
+{
+    Mode_maintenance();
+}
+else{
+    Mode_configuration();
+}
+temps_appui_rouge=millis();
+}
+
+
+volatile long temps_appui_vert = 0;  // Variable pour stocker le temps d'appui du bouton vert
+
+void appuiVert(){
+    temps_appui_rouge=millis();
+}
+
+void relacheVert(){
+if (millis()-temps_appui_vert>=5000)
+{
+    Mode_eco();
+}
+temps_appui_vert=millis();
+}
+
+void InitInterrupt(){
+    attachInterrupt(digitalPinToInterrupt(boutonRouge), appuiRouge, RISING);
+    attachInterrupt(digitalPinToInterrupt(boutonRouge), relacheRouge, FALLING);
+    attachInterrupt(digitalPinToInterrupt(boutonVert), appuiVert, RISING);
+    attachInterrupt(digitalPinToInterrupt(boutonVert), relacheVert, FALLING);
+}
+
+int main(){
+    InitInterrupt();
+    Mode_standard();
+    return 0;
+}
