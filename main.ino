@@ -46,7 +46,10 @@ int LUMIN = 1; // Valeur par défaut
 int LUMIN_LOW = 200; // Valeur par défaut
 int LUMIN_HIGH = 700; // Valeur par défaut
 
+RTC_DS3231 rtc;  // Créez une instance de votre module RTC
 
+const char* VERSION = "1.0"; // Version du programme
+const char* LOT_NUMBER = "A123"; // Numéro de lot
 
 void Mesure_donnees(){
     for (int i=0;i<nb_capteurs;i++){
@@ -102,6 +105,31 @@ void Mode_maintenance() {
         }
     } 
 } 
+
+void setup() {
+    Serial.begin(9600);
+    if (!rtc.begin()) {
+        Serial.println("Erreur de communication avec le module RTC !");
+        while (1);
+    }
+
+    // Lire les paramètres à partir de l'EEPROM
+    EEPROM.get(0, LOG_INTERVAL);
+    EEPROM.get(4, FILE_MAX_SIZE);
+    EEPROM.get(8, TIMEOUT);
+    EEPROM.get(12, LUMIN);
+    EEPROM.get(16, LUMIN_LOW);
+    EEPROM.get(20, LUMIN_HIGH);
+}
+
+void displayVersion() {
+    Serial.print("Version du programme : ");
+    Serial.println(VERSION);
+    Serial.print("Numéro de lot : ");
+    Serial.println(LOT_NUMBER);
+}
+
+
 
 void Mode_configuration() {
     setLedcolor(ledPin, 255, 255, 0);  // LED jaune pour signaler le mode configuration
