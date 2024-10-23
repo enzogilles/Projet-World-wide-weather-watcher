@@ -38,6 +38,16 @@ unsigned long temps_appui_vert=0;
 
 int mesures[5];
 
+
+int LOG_INTERVAL = 10; // Valeur par défaut
+int FILE_MAX_SIZE = 4096; // Valeur par défaut
+int TIMEOUT = 30; // Valeur par défaut
+int LUMIN = 1; // Valeur par défaut
+int LUMIN_LOW = 200; // Valeur par défaut
+int LUMIN_HIGH = 700; // Valeur par défaut
+
+
+
 void Mesure_donnees(){
     for (int i=0;i<nb_capteurs;i++){
         mesures[i]=analogRead(capteurs[i]);
