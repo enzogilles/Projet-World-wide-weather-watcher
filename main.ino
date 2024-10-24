@@ -13,38 +13,13 @@
 #define carteSD 4
  
 
-// Données RTC
-int heure = 0, minute = 0, seconde = 0;
-int jour = 1, mois = 1, annee = 2000;
-char jour_semaine[20] = "Lundi";      
-
-// Variables pour les capteurs
-float pression, temperature_air, hygrometrie; // "Float" est utilisé pour des nombres à virgule flottante (taille 4 octets)
-int gps_data;  // "int" est utilisé pour les entiers (taille 2 octets)
-float luminosite;
-char etat_systeme[20]; // "char" permet de sotcker un petit entier ou un caractère unique (taille 2 octets)
-
-// Variables fichier de log
-int nb_capteurs=5;
-int capteurs[5] = {5, 6, 7, 8, 9};
-char fichier_log[20];              
-int revision = 0;
-int LOG_INTERVAL=10;
-int FILE_MAX_SIZE=2000; 
-int TIMEOUT=30;            
+     
 unsigned long taille_fichier = 0; //  "unsigned long" est utilisé pour Un entier long non signé, c'est-à-dire un entier positif (il ne peut pas être négatif, taille 4 octets)
 unsigned long temps_appui_rouge=0;
 unsigned long temps_appui_vert=0;
 
-int mesures[5];
-int LUMIN = 1; // Valeur par défaut
-int LUMIN_LOW = 200; // Valeur par défaut
-int LUMIN_HIGH = 700; // Valeur par défaut
 
-RTC_DS3231 rtc;  // Créez une instance de votre module RTC
 
-const char* VERSION = "1.0"; // Version du programme
-const char* LOT_NUMBER = "A123"; // Numéro de lot
 
 void Mesure_donnees(){
     for (int i=0;i<nb_capteurs;i++){
@@ -67,8 +42,7 @@ void Mode_standard(){
     enregistrer_donnees(mesures); // Appel de la fonction
     delay(LOG_INTERVAL*60*1000); // Simulation de toutes les opérations
     
-    // 
-    // 
+
 }
 
 
@@ -101,149 +75,159 @@ void Mode_maintenance() {
     } 
 } 
 
+
+
+// Début du mode Configuration 
+void resetParameters();
+void VersionLogiciel();
+void Mode_configuration(); 
+
+// Variables globales
+int LOG_INTERVAL = 10;  
+int FILE_MAX_SIZE = 4;  
+int TIMEOUT = 30;       
+int LUMIN = 1;          
+int LUMIN_LOW = 100;   
+int LUMIN_HIGH = 255;   
+
+unsigned long lastActivityTime; 
+const unsigned long timeoutDuration = 30 * 60 * 1000; 
+
 void setup() {
-    Serial.begin(9600);
-    if (!rtc.begin()) {
-        Serial.println("Erreur de communication avec le module RTC !");
-        while (1);
-    }
-
-    // Lire les paramètres à partir de l'EEPROM
-    EEPROM.get(0, LOG_INTERVAL);
-    EEPROM.get(4, FILE_MAX_SIZE);
-    EEPROM.get(8, TIMEOUT);
-    EEPROM.get(12, LUMIN);
-    EEPROM.get(16, LUMIN_LOW);
-    EEPROM.get(20, LUMIN_HIGH);
+    Serial.begin(9600);  
+    Serial.println("Demarrage du systeme...");
+    lastActivityTime = millis(); 
 }
 
-void displayVersion() {
-    Serial.print("Version du programme : ");
-    Serial.println(VERSION);
-    Serial.print("Numéro de lot : ");
-    Serial.println(LOT_NUMBER);
+void loop() {
+    Mode_configuration(); 
 }
-
-
 
 void Mode_configuration() {
-    setLedcolor(ledPin, 255, 255, 0);  // LED jaune pour signaler le mode configuration
-    Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
+    Serial.println("Mode configuration : Entrez le numero du parametre a modifier");
     Serial.println("1: LOG_INTERVAL");
     Serial.println("2: FILE_MAX_SIZE");
     Serial.println("3: TIMEOUT");
     Serial.println("4: LUMIN");
     Serial.println("5: LUMIN_LOW");
     Serial.println("6: LUMIN_HIGH");
-    Serial.println("7: RESET");
+    Serial.println("7: Reinitialiser les parametres"); 
     Serial.println("8: VERSION");
+    Serial.println("9: Quitter"); 
 
-    while (Serial.available() == 0) {}
+    // Affichage des valeurs actuelles
+    Serial.println("Valeurs actuelles :");
+    Serial.print("LOG_INTERVAL: ");
+    Serial.println(LOG_INTERVAL);
+    Serial.print("FILE_MAX_SIZE: ");
+    Serial.println(FILE_MAX_SIZE);
+    Serial.print("TIMEOUT: ");
+    Serial.println(TIMEOUT);
+    Serial.print("LUMIN: ");
+    Serial.println(LUMIN);
+    Serial.print("LUMIN_LOW: ");
+    Serial.println(LUMIN_LOW);
+    Serial.print("LUMIN_HIGH: ");
+    Serial.println(LUMIN_HIGH);
+    Serial.println();
 
-    int commande = Serial.parseInt();  // Lire la commande utilisateur
+    lastActivityTime = millis(); // Réinitialiser le temps d'activité
 
-    switch (commande) {
-        case 1:
-            Serial.println("Entrez la nouvelle valeur pour LOG_INTERVAL (en minutes) :");
-            while (Serial.available() == 0) {}
-            LOG_INTERVAL = Serial.parseInt();
-            EEPROM.put(0, LOG_INTERVAL);  // Enregistrer dans l'EEPROM à l'adresse 0
-            Serial.print("LOG_INTERVAL mis à jour à : ");
-            Serial.println(LOG_INTERVAL);
-            break;
+    while (true) {  
+        // Vérifier si 30 minutes se sont écoulées
+        if (millis() - lastActivityTime >= timeoutDuration) {
+            Serial.println("Passage en mode standard après 30 minutes d'inactivité.");
+            return; // Quitter le mode configuration et revenir à la boucle principale
+        }
 
-        case 2:
-            Serial.println("Entrez la nouvelle valeur pour FILE_MAX_SIZE (en Ko) :");
-            while (Serial.available() == 0) {}
-            FILE_MAX_SIZE = Serial.parseInt();
-            EEPROM.put(4, FILE_MAX_SIZE);  // Adresse différente dans l'EEPROM
-            Serial.print("FILE_MAX_SIZE mis à jour à : ");
-            Serial.println(FILE_MAX_SIZE);
-            break;
+        while (Serial.available() == 0) {}
+        lastActivityTime = millis(); // Mettre à jour le temps d'activité
+        int commande = Serial.parseInt();  
 
-        case 3:
-            Serial.println("Entrez la nouvelle valeur pour TIMEOUT (en secondes) :");
-            while (Serial.available() == 0) {}
-            TIMEOUT = Serial.parseInt();
-            EEPROM.put(8, TIMEOUT);  // Adresse suivante dans l'EEPROM
-            Serial.print("TIMEOUT mis à jour à : ");
-            Serial.println(TIMEOUT);
-            break;
+        switch (commande) {
+            case 1:
+                Serial.println("Entrez la nouvelle valeur pour LOG_INTERVAL (en minutes) :");
+                while (Serial.available() == 0) {}
+                LOG_INTERVAL = Serial.parseInt();
+                Serial.print("LOG_INTERVAL mis à jour à : ");
+                Serial.println(LOG_INTERVAL);
+                break;
 
-        case 4:
-            Serial.println("Activer (1) ou désactiver (0) LUMIN :");
-            while (Serial.available() == 0) {}
-            LUMIN = Serial.parseInt();
-            EEPROM.put(12, LUMIN);
-            Serial.print("LUMIN mis à jour à : ");
-            Serial.println(LUMIN);
-            break;
+            case 2:
+                Serial.println("Entrez la nouvelle valeur pour FILE_MAX_SIZE (en Ko) :");
+                while (Serial.available() == 0) {}
+                FILE_MAX_SIZE = Serial.parseInt();
+                Serial.print("FILE_MAX_SIZE mis à jour à : ");
+                Serial.println(FILE_MAX_SIZE);
+                break;
 
-        case 5:
-            Serial.println("Entrez une nouvelle valeur pour LUMIN_LOW :");
-            while (Serial.available() == 0) {}
-            LUMIN_LOW = Serial.parseInt();
-            EEPROM.put(16, LUMIN_LOW);
-            Serial.print("LUMIN_LOW mis à jour à : ");
-            Serial.println(LUMIN_LOW);
-            break;
+            case 3:
+                Serial.println("Entrez la nouvelle valeur pour TIMEOUT (en secondes) :");
+                while (Serial.available() == 0) {}
+                TIMEOUT = Serial.parseInt();
+                Serial.print("TIMEOUT mis à jour à : ");
+                Serial.println(TIMEOUT);
+                break;
 
-        case 6:
-            Serial.println("Entrez une nouvelle valeur pour LUMIN_HIGH :");
-            while (Serial.available() == 0) {}
-            LUMIN_HIGH = Serial.parseInt();
-            EEPROM.put(20, LUMIN_HIGH);
-            Serial.print("LUMIN_HIGH mis à jour à : ");
-            Serial.println(LUMIN_HIGH);
-            break;
+            case 4:
+                Serial.println("Activer (1) ou désactiver (0) LUMIN :");
+                while (Serial.available() == 0) {}
+                LUMIN = Serial.parseInt();
+                Serial.print("LUMIN mis à jour à : ");
+                Serial.println(LUMIN);
+                break;
 
-        case 7: // Réinitialisation
-            resetParameters();
-            break;
+            case 5:
+                Serial.println("Entrez une nouvelle valeur pour LUMIN_LOW :");
+                while (Serial.available() == 0) {}
+                LUMIN_LOW = Serial.parseInt();
+                Serial.print("LUMIN_LOW mis à jour à : ");
+                Serial.println(LUMIN_LOW);
+                break;
 
-        case 8: // Affichage de la version
-            displayVersion();
-            break;
+            case 6:
+                Serial.println("Entrez une nouvelle valeur pour LUMIN_HIGH :");
+                while (Serial.available() == 0) {}
+                LUMIN_HIGH = Serial.parseInt();
+                Serial.print("LUMIN_HIGH mis à jour à : ");
+                Serial.println(LUMIN_HIGH);
+                break;
 
-        default:
-            Serial.println("Commande non reconnue");
-            break;
+            case 7: 
+                resetParameters(); 
+                break;
+
+            case 8: 
+                VersionLogiciel();
+                break;
+
+            case 9: 
+                Serial.println("Quitter le mode de configuration.");
+                return;
+
+            default:
+                Serial.println("Commande non reconnue");
+                break;
+        }
     }
 }
 
-void checkSensors() {
-    int sensorPin = A0;  // Exemple de broche pour un capteur
-    int retries = 0;
-    bool sensorError = false;
-
-    while (retries < 2) {  // Utilisez le nombre de tentatives défini
-        Serial.print("Lecture du capteur (tentative ");
-        Serial.print(retries + 1);
-        Serial.println(")...");
-
-        long startTime = millis();
-        int data = readSensorData(sensorPin);  // Lire les données du capteur
-
-        // Vérifier si la lecture a réussi
-        if (data != -1) {
-            Serial.print("Données du capteur : ");
-            Serial.println(data);
-            break;  // Sortir de la boucle si la lecture a réussi
-        }
-
-        // Vérification du timeout
-        if (millis() - startTime > TIMEOUT * 1000) {
-            Serial.println("Timeout lors de la lecture du capteur !");
-            retries++;
-        }
-    }
-
-    // Si nous avons épuisé les tentatives sans succès
-    if (retries >= 2) {
-        sensorError = true;
-        Serial.println("Erreur : Le capteur ne répond pas après plusieurs tentatives.");
-    }
+void resetParameters() {
+    LOG_INTERVAL = 10;  
+    FILE_MAX_SIZE = 4;  
+    TIMEOUT = 30;       
+    LUMIN = 1;          
+    LUMIN_LOW = 100;    
+    LUMIN_HIGH = 255;   
+    Serial.println("Tous les paramètres ont été réinitialisés.");
 }
+
+void VersionLogiciel() {
+    Serial.println("Version du programme : 1.0.0");
+}
+
+// Fin du mode Configuration
+
 
 
 volatile long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
