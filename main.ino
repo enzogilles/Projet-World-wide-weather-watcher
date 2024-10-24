@@ -10,6 +10,16 @@
 #define boutonVert 3
 #define carteSD 4
  
+// Variables globales
+int LOG_INTERVAL = 10;  
+int FILE_MAX_SIZE = 4;  
+int TIMEOUT = 30;       
+int LUMIN = 1;          
+int LUMIN_LOW = 100;   
+int LUMIN_HIGH = 255;   
+
+
+
 
      
 unsigned long taille_fichier = 0; //  "unsigned long" est utilisé pour Un entier long non signé, c'est-à-dire un entier positif (il ne peut pas être négatif, taille 4 octets)
@@ -80,13 +90,6 @@ void resetParameters();
 void VersionLogiciel();
 void Mode_configuration(); 
 
-// Variables globales
-int LOG_INTERVAL = 10;  
-int FILE_MAX_SIZE = 4;  
-int TIMEOUT = 30;       
-int LUMIN = 1;          
-int LUMIN_LOW = 100;   
-int LUMIN_HIGH = 255;   
 
 unsigned long lastActivityTime; 
 const unsigned long timeoutDuration = 30 * 60 * 1000; 
