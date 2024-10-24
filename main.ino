@@ -32,11 +32,16 @@ char etat_systeme[20]; // "char" permet de sotcker un petit entier ou un caract�
 int nb_capteurs=3;
 int capteurs[1] = {1};
 char fichier_log[20];              
-int revision = 0;
-int LOG_INTERVAL=10;
-int FILE_MAX_SIZE=2000; 
-int TIMEOUT=30;            
+int revision = 0;           
 unsigned long taille_fichier = 0; //  "unsigned long" est utilisé pour Un entier long non signé, c'est-à-dire un entier positif (il ne peut pas être négatif, taille 4 octets)
+
+// Variables globales
+int LOG_INTERVAL = 10;  
+int FILE_MAX_SIZE = 4;  
+int TIMEOUT = 30;       
+int LUMIN = 1;          
+int LUMIN_LOW = 100;   
+int LUMIN_HIGH = 255;   
 
 int mesures[10];
 
@@ -107,16 +112,6 @@ void Mode_configuration();
 
 unsigned long lastActivityTime; 
 const unsigned long timeoutDuration = 30 * 60 * 1000; 
-
-void setup() {
-    Serial.begin(9600);  
-    Serial.println("Demarrage du systeme...");
-    lastActivityTime = millis(); 
-}
-
-void loop() {
-    Mode_configuration(); 
-}
 
 void Mode_configuration() {
     Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
@@ -240,60 +235,69 @@ void VersionLogiciel() {
 // Fin du mode Configuration
 
 
+volatile bool etatPrecedentRouge = HIGH;
+unsigned long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
 
-volatile long temps_appui_rouge = 0;  // Variable pour stocker le temps d'appui du bouton rouge
-volatile long temps_relache_rouge = 0;  // Variable pour stocker le temps de relâchement du bouton rouge
-
-void appuiRouge(){
-    Serial.println("appui rouge");
+void BasculeRouge() {
+  if (millis()-temps_appui_rouge>100){
+      bool etatActuel = digitalRead(boutonRouge);
+  if (etatActuel == LOW && etatPrecedentRouge == HIGH) {
+    Serial.print("Appui à ");
+    Serial.println(millis());
     temps_appui_rouge=millis();
-}
-
-void relacheRouge(){
-    if (millis()-temps_relache_rouge>200){
-      Serial.println("relache rouge");
-        if (millis()-temps_appui_rouge>=5000)
-            {
-            Mode_maintenance();
-            }
-        else{
-            Mode_configuration();
-        }
+  } else if (etatActuel == HIGH && etatPrecedentRouge == LOW) {
+    Serial.print("Relache à ");
+    Serial.println(millis());
+    if (millis()-temps_appui_rouge>5000){
+      Serial.print("Ecart : ");
+      Serial.println(millis()-temps_appui_rouge);
+      Mode_maintenance();
+    }
+    else{
+      Mode_configuration();
     }
     temps_appui_rouge=millis();
-    temps_relache_rouge=millis();
+  }
+  etatPrecedentRouge = etatActuel; // Met à jour l'état précédent
+  }
 }
 
 
-volatile long temps_appui_vert = 0;  // Variable pour stocker le temps d'appui du bouton vert
-volatile long temps_relache_vert = 0;  // Variable pour stocker le temps de relâchement du bouton vert
+volatile bool etatPrecedentVert = HIGH;
+unsigned long temps_appui_vert = 0;  // Variable pour stocker le temps d'appui du bouton rouge
 
-void appuiVert(){
-  Serial.println("appui vert");
+void BasculeVert() {
+  if (millis()-temps_appui_vert>100){
+      bool etatActuel = digitalRead(boutonVert);
+  if (etatActuel == LOW && etatPrecedentVert == HIGH) {
+    Serial.print("Appui à ");
+    Serial.println(millis());
     temps_appui_vert=millis();
-}
-
-void relacheVert(){
-    if (millis()-temps_relache_vert>200){
-      Serial.println("relache vert");
-        if (millis()-temps_appui_vert>=5000)
-        {
-            Serial.println("Mode éco");
-        }
+  } else if (etatActuel == HIGH && etatPrecedentVert == LOW) {
+    Serial.print("Relache à ");
+    Serial.println(millis());
+    if (millis()-temps_appui_vert>5000){
+      Serial.print("Ecart : ");
+      Serial.println(millis()-temps_appui_vert);
+      Serial.println("Mode éco");
+      
     }
     temps_appui_vert=millis();
-    temps_relache_vert=millis();
+  }
+  etatPrecedentVert = etatActuel; // Met à jour l'état précédent
+  }
 }
 
 void InitInterrupt(){
-    attachInterrupt(digitalPinToInterrupt(boutonRouge), appuiRouge, RISING);
-    attachInterrupt(digitalPinToInterrupt(boutonRouge), relacheRouge, FALLING);
-    attachInterrupt(digitalPinToInterrupt(boutonVert), appuiVert, RISING);
-    attachInterrupt(digitalPinToInterrupt(boutonVert), relacheVert, FALLING);
+    attachInterrupt(digitalPinToInterrupt(boutonRouge), BasculeRouge, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(boutonVert), BasculeVert, CHANGE);
 }
 
 void setup(){
   Serial.begin(9600);
+  Serial.println("setup");
+  pinMode(boutonRouge, INPUT);
+  pinMode(boutonVert, INPUT);
   Serial.println(F("BME280 et capteur de luminosité avec boutons"));
 
   // Initialisation du capteur BME280
