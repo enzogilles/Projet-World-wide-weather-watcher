@@ -1,9 +1,7 @@
 // Importation des librairies //
 #include <stdio.h>
-#include <string.h> 
 #include <time.h>
-#include <EEPROM.h>
-#include <RTClib.h> 
+
 
 // Déclaration des variables globales (permet de définir le branchement de l'élement concerné)
 
