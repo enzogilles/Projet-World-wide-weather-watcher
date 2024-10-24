@@ -60,7 +60,8 @@ void Mode_maintenance() {
     // Vérification de la taille du fichier
     if (taille_fichier <= 2000) {
         Serial.println("Mode maintenance activé.");
-
+        Serial.println("Accès à la carte SD désactivé, vous pouvez désormais remplacer la carte.");
+        
         while (1) {
             // Lecture des capteurs (assignation des pins capteurs)
             int pression = analogRead(5);
