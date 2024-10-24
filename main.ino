@@ -1,9 +1,7 @@
 // Importation des librairies //
 #include <stdio.h>
 #include <time.h>
-#include <EEPROM.h>
 #include <RTClib.h>
-#include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
