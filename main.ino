@@ -4,7 +4,12 @@
 #include <RTClib.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <ChainableLED.h>
 
+#define DATA_PIN 6        
+#define CLOCK_PIN 7       
+
+ChainableLED leds(DATA_PIN, CLOCK_PIN, 1); 
 Adafruit_BME280 bme;
 
 // Déclaration des variables globales (permet de définir le branchement de l'élement concerné)
@@ -62,6 +67,7 @@ void enregistrer_donnees(int* donnees){
 }
 
 void Mode_standard(){
+    setCouleur(0,255,0) // Couleur Mode Standard
     mode=1;
     // On utilise tous les capteurs (Mode par défaut)
     nb_capteurs=5; // Pression, Température de l'air, Hygrométrie, GPS, Luminosité.
@@ -75,6 +81,7 @@ void Mode_standard(){
 }
 
 void Mode_Economique(){
+  setCouleur(0,0,255) // Couleur Mode Éco
   // Lire et afficher la température
   Serial.print("Température = ");
   Serial.print(bme.readTemperature());
@@ -94,6 +101,7 @@ void Mode_Economique(){
 }
 
 void Mode_maintenance() {
+    setCouleur(255,128,0) // Couleur Mode Maintenance
     mode=3;
     // Vérification de la taille du fichier
     if (taille_fichier <= 2000) {
@@ -133,6 +141,7 @@ unsigned long lastActivityTime;
 const unsigned long timeoutDuration = 30 * 60 * 1000; 
 
 void Mode_configuration() {
+    setCouleur(255,255,0) // Couleur Mode Configuration
     mode=2;
     Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
     Serial.println("1: LOG_INTERVAL");
@@ -338,4 +347,7 @@ void setup(){
 void loop(){
   Serial.println("loop");
   Mode_standard();
+}
+void setCouleur(int rouge, int vert, int bleu) {
+  leds.setColorRGB(0, rouge, vert, bleu);  // Code RGB (0 à 255)
 }
