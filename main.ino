@@ -11,6 +11,7 @@
 
 ChainableLED leds(DATA_PIN, CLOCK_PIN, 1); 
 Adafruit_BME280 bme;
+RTC_DS3231 rtc;
 
 // Déclaration des variables globales (permet de définir le branchement de l'élement concerné)
 
@@ -140,6 +141,22 @@ Serial.println("Config");
 
 }
 
+// Fonction pour afficher l'heure courante
+void afficherHeureCourante() {
+    DateTime now = rtc.now();
+    Serial.print("Date: ");
+    Serial.print(now.day());
+    Serial.print("/");
+    Serial.print(now.month());
+    Serial.print("/");
+    Serial.print(now.year());
+    Serial.print(" Heure: ");
+    Serial.print(now.hour());
+    Serial.print(":");
+    Serial.print(now.minute());
+    Serial.print(":");
+    Serial.println(now.second());
+}
 
 
 
@@ -219,7 +236,16 @@ void setup(){
   pinMode(boutonVert, INPUT);
   Serial.println(F("BME280 et capteur de luminosité avec boutons"));
 
-  // Initialisation du capteur BME280
+  if (!rtc.begin()) {
+    Serial.println("Erreur lors de l'initialisation du RTC, vérifiez le câblage !");
+    while (1);
+  }
+
+  if (rtc.lostPower()) {
+    Serial.println("L'horloge a perdu l'alimentation, réglage de la date et l'heure !");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+
   if (!bme.begin(0x76)) {
     Serial.println("Impossible de trouver un capteur BME280, vérifiez le câblage !");
     while (1);
@@ -228,9 +254,10 @@ void setup(){
 }
 
 void loop(){
-  Serial.println("loop");
+  afficherHeureCourante();
   Mode_standard();
 }
+
 void setCouleur(int rouge, int vert, int bleu) {
-  leds.setColorRGB(0, rouge, vert, bleu);  // Code RGB (0 à 255)
+  leds.setColorRGB(0, rouge, vert, bleu);
 }
