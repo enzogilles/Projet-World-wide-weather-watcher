@@ -74,6 +74,27 @@ void Mode_standard(){
     // 
 }
 
+void Mode_Economique(){
+  // Lire et afficher la température
+  float temperature = bme.readTemperature();
+  Serial.print("Température = ");
+  Serial.print(temperature);
+  Serial.println(" °C");
+
+  // Lire et afficher la pression atmosphérique
+  float pression = bme.readPressure();
+  Serial.print("Pression = ");
+  Serial.print(pression);
+  Serial.println(" Pa");
+
+  // Lire l'altitude calculée en fonction de la pression
+  float altitude = bme.readAltitude(1013.25);
+  Serial.print("Altitude approximative = ");
+  Serial.print(altitude);
+  Serial.println(" m");
+
+  delay(LOG_INTERVAL*60*2000);  // Simulation de toutes les opérations
+}
 
 void Mode_maintenance() {
     mode=3;
