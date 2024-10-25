@@ -39,7 +39,9 @@ int FILE_MAX_SIZE = 4;
 int TIMEOUT = 30;       
 int LUMIN = 1;          
 int LUMIN_LOW = 100;   
-int LUMIN_HIGH = 255;   
+int LUMIN_HIGH = 255; 
+
+int mode=1 // 1: Standard, 2: Config, 3: Maintenance, 4 : Eco
 
 int mesures[10];
 
@@ -60,6 +62,7 @@ void enregistrer_donnees(int* donnees){
 }
 
 void Mode_standard(){
+    mode=1;
     // On utilise tous les capteurs (Mode par défaut)
     nb_capteurs=5; // Pression, Température de l'air, Hygrométrie, GPS, Luminosité.
 
@@ -73,7 +76,7 @@ void Mode_standard(){
 
 
 void Mode_maintenance() {
-
+    mode=3;
     // Vérification de la taille du fichier
     if (taille_fichier <= 2000) {
         Serial.println("Mode maintenance activé.");
@@ -112,6 +115,7 @@ unsigned long lastActivityTime;
 const unsigned long timeoutDuration = 30 * 60 * 1000; 
 
 void Mode_configuration() {
+    mode=2;
     Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
     Serial.println("1: LOG_INTERVAL");
     Serial.println("2: FILE_MAX_SIZE");
@@ -249,7 +253,14 @@ void BasculeRouge() {
     if (millis()-temps_appui_rouge>5000){
       Serial.print("Ecart : ");
       Serial.println(millis()-temps_appui_rouge);
-      Mode_maintenance();
+      if (mode=1){
+        Mode_maintenance();
+      }
+      elif (mode=3 || mode=4)
+      {
+        Mode_standard();
+      }
+      
     }
     else{
       Mode_configuration();
