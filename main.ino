@@ -46,7 +46,7 @@ int LUMIN = 1;
 int LUMIN_LOW = 100;   
 int LUMIN_HIGH = 255; 
 
-int mode=1 // 1: Standard, 2: Config, 3: Maintenance, 4 : Eco
+int mode=1; // 1: Standard, 2: Config, 3: Maintenance, 4 : Eco
 
 int mesures[10];
 
@@ -67,7 +67,7 @@ void enregistrer_donnees(int* donnees){
 }
 
 void Mode_standard(){
-    setCouleur(0,255,0) // Couleur Mode Standard
+    setCouleur(0,255,0); // Couleur Mode Standard
     mode=1;
     // On utilise tous les capteurs (Mode par défaut)
     nb_capteurs=5; // Pression, Température de l'air, Hygrométrie, GPS, Luminosité.
@@ -81,7 +81,8 @@ void Mode_standard(){
 }
 
 void Mode_Economique(){
-  setCouleur(0,0,255) // Couleur Mode Éco
+  mode=4;
+  setCouleur(0,0,255); // Couleur Mode Éco
   // Lire et afficher la température
   Serial.print("Température = ");
   Serial.print(bme.readTemperature());
@@ -101,7 +102,7 @@ void Mode_Economique(){
 }
 
 void Mode_maintenance() {
-    setCouleur(255,128,0) // Couleur Mode Maintenance
+    setCouleur(255,128,0); // Couleur Mode Maintenance
     mode=3;
     // Vérification de la taille du fichier
     if (taille_fichier <= 2000) {
@@ -132,134 +133,15 @@ void Mode_maintenance() {
 } 
 
 // Début du mode Configuration 
-void resetParameters();
-void VersionLogiciel();
-void Mode_configuration(); 
-
-
-unsigned long lastActivityTime; 
-const unsigned long timeoutDuration = 30 * 60 * 1000; 
 
 void Mode_configuration() {
-    setCouleur(255,255,0) // Couleur Mode Configuration
-    mode=2;
-    Serial.println("Mode configuration : Entrez le numéro du paramètre à modifier");
-    Serial.println("1: LOG_INTERVAL");
-    Serial.println("2: FILE_MAX_SIZE");
-    Serial.println("3: TIMEOUT");
-    Serial.println("4: LUMIN");
-    Serial.println("5: LUMIN_LOW");
-    Serial.println("6: LUMIN_HIGH");
-    Serial.println("7: RESET");
-    Serial.println("8: VERSION");
 
-    // Affichage des valeurs actuelles
-    Serial.println("Valeurs actuelles :");
-    Serial.print("LOG_INTERVAL: ");
-    Serial.println(LOG_INTERVAL);
-    Serial.print("FILE_MAX_SIZE: ");
-    Serial.println(FILE_MAX_SIZE);
-    Serial.print("TIMEOUT: ");
-    Serial.println(TIMEOUT);
-    Serial.print("LUMIN: ");
-    Serial.println(LUMIN);
-    Serial.print("LUMIN_LOW: ");
-    Serial.println(LUMIN_LOW);
-    Serial.print("LUMIN_HIGH: ");
-    Serial.println(LUMIN_HIGH);
-    Serial.println();
+Serial.println("Config");
 
-    lastActivityTime = millis(); // Réinitialiser le temps d'activité
-
-    while (true) {  
-        // Vérifier si 30 minutes se sont écoulées
-        if (millis() - lastActivityTime >= timeoutDuration) {
-            Serial.println("Passage en mode standard après 30 minutes d'inactivité.");
-            return; // Quitter le mode configuration et revenir à la boucle principale
-        }
-
-    while (Serial.available() == 0) {}
-    lastActivityTime = millis(); // Mettre à jour le temps d'activité
-    int commande = Serial.parseInt();  // Lire la commande utilisateur
-
-    switch (commande) {
-        case 1:
-            Serial.println("Entrez la nouvelle valeur pour LOG_INTERVAL (en minutes) :");
-            while (Serial.available() == 0) {}
-            LOG_INTERVAL = Serial.parseInt();
-            Serial.print("LOG_INTERVAL mis à jour à : ");
-            Serial.println(LOG_INTERVAL);
-            break;
-        case 2:
-                Serial.println("Entrez la nouvelle valeur pour FILE_MAX_SIZE (en Ko) :");
-                while (Serial.available() == 0) {}
-                FILE_MAX_SIZE = Serial.parseInt();
-                Serial.print("FILE_MAX_SIZE mis à jour à : ");
-                Serial.println(FILE_MAX_SIZE);
-                break;
-
-            case 3:
-                Serial.println("Entrez la nouvelle valeur pour TIMEOUT (en secondes) :");
-                while (Serial.available() == 0) {}
-                TIMEOUT = Serial.parseInt();
-                Serial.print("TIMEOUT mis à jour à : ");
-                Serial.println(TIMEOUT);
-                break;
-
-            case 4:
-                Serial.println("Activer (1) ou désactiver (0) LUMIN :");
-                while (Serial.available() == 0) {}
-                LUMIN = Serial.parseInt();
-                Serial.print("LUMIN mis à jour à : ");
-                Serial.println(LUMIN);
-                break;
-
-            case 5:
-                Serial.println("Entrez une nouvelle valeur pour LUMIN_LOW :");
-                while (Serial.available() == 0) {}
-                LUMIN_LOW = Serial.parseInt();
-                Serial.print("LUMIN_LOW mis à jour à : ");
-                Serial.println(LUMIN_LOW);
-                break;
-
-            case 6:
-                Serial.println("Entrez une nouvelle valeur pour LUMIN_HIGH :");
-                while (Serial.available() == 0) {}
-                LUMIN_HIGH = Serial.parseInt();
-                Serial.print("LUMIN_HIGH mis à jour à : ");
-                Serial.println(LUMIN_HIGH);
-                break;
-
-            case 7: 
-                resetParameters(); 
-                break;
-
-            case 8: 
-                VersionLogiciel();
-                break;
-
-            case 9: 
-                Serial.println("Quitter le mode de configuration.");
-                return;
-        default:
-            Serial.println("Commande non reconnue");
-            break;
-    }
-}
-}
-void resetParameters() {
-    LOG_INTERVAL = 10;  
-    FILE_MAX_SIZE = 4;  
-    TIMEOUT = 30;       
-    LUMIN = 1;          
-    LUMIN_LOW = 100;    
-    LUMIN_HIGH = 255;   
-    Serial.println("Tous les paramètres ont été réinitialisés.");
 }
 
-void VersionLogiciel() {
-    Serial.println("Version du programme : 1.0.0");
-}
+
+
 
 // Fin du mode Configuration
 
@@ -283,7 +165,7 @@ void BasculeRouge() {
       if (mode=1){
         Mode_maintenance();
       }
-      elif (mode=3 || mode=4)
+      else if (mode==3 || mode==4)
       {
         Mode_standard();
       }
@@ -315,7 +197,7 @@ void BasculeVert() {
     if (millis()-temps_appui_vert>5000){
       Serial.print("Ecart : ");
       Serial.println(millis()-temps_appui_vert);
-      Serial.println("Mode éco");
+      Mode_Economique();
       
     }
     temps_appui_vert=millis();
