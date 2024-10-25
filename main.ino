@@ -109,10 +109,10 @@ void Mode_Economique(){
   Serial.print(bme.readPressure());
   Serial.println(" Pa");
 
-  // Lire l'altitude calculée en fonction de la pression
-  Serial.print("Altitude approximative = ");
-  Serial.print(bme.readAltitude(1013.25));
-  Serial.println(" m");
+  // Lire et afficher l'humidité
+  Serial.print("Humidité = ");
+  Serial.print(bme.readHumidity());
+  Serial.println(" %");
 
   delay(LOG_INTERVAL*60*2000);  // Simulation de toutes les opérations
 }
