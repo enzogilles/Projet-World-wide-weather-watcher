@@ -5,6 +5,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <ChainableLED.h>
+#include <SD.h>
+#include <SPI.h>
 
 #define DATA_PIN 6        
 #define CLOCK_PIN 7       
@@ -12,6 +14,8 @@
 ChainableLED leds(DATA_PIN, CLOCK_PIN, 1); 
 Adafruit_BME280 bme;
 RTC_DS3231 rtc;
+File fichier;
+
 
 // Déclaration des variables globales (permet de définir le branchement de l'élement concerné)
 
@@ -61,10 +65,21 @@ void Mesure_donnees(){
 }
 
 void enregistrer_donnees(int* donnees){
+    fichier=SD.open("datalog.txt",FILE_WRITE);
     for (int i=0;i<nb_capteurs;i++){
         Serial.print("Données");
         Serial.println(donnees[i]);
+        if (fichier) {
+          Serial.print("Ecriture sur la carte...");
+          fichier.println(donnees[i]);
+          // close the file:
+          Serial.println("done.");
+        } else {
+          // if the file didn't open, print an error:
+          Serial.println("error opening test.txt");
+        }
     }
+  fichier.close();
 }
 
 void Mode_standard(){
@@ -159,7 +174,6 @@ void afficherHeureCourante() {
 }
 
 
-
 // Fin du mode Configuration
 
 
@@ -231,6 +245,13 @@ void InitInterrupt(){
 void setup(){
   Serial.begin(9600);
   Serial.println("setup");
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
   leds.init();
   pinMode(boutonRouge, INPUT);
   pinMode(boutonVert, INPUT);
@@ -245,7 +266,6 @@ void setup(){
     Serial.println("L'horloge a perdu l'alimentation, réglage de la date et l'heure !");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
-
   if (!bme.begin(0x76)) {
     Serial.println("Impossible de trouver un capteur BME280, vérifiez le câblage !");
     while (1);
@@ -255,9 +275,9 @@ void setup(){
 
 void loop(){
   afficherHeureCourante();
+  Serial.println("loop");
   Mode_standard();
 }
-
 void setCouleur(int rouge, int vert, int bleu) {
-  leds.setColorRGB(0, rouge, vert, bleu);
+  leds.setColorRGB(0, rouge, vert, bleu);  // Code RGB (0 à 255)
 }
