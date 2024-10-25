@@ -332,6 +332,7 @@ void InitInterrupt(){
 void setup(){
   Serial.begin(9600);
   Serial.println("setup");
+  leds.init();
   pinMode(boutonRouge, INPUT);
   pinMode(boutonVert, INPUT);
   Serial.println(F("BME280 et capteur de luminosité avec boutons"));
