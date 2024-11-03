@@ -1,4 +1,4 @@
-#include <SD.h>
+#include <SdFat.h>
 #include <Adafruit_BME280.h>
 #include <RTClib.h>
 #include <EEPROM.h>
@@ -10,6 +10,7 @@
 #define ledPin1 6
 #define ledPin2 7
 
+SdFat SD;
 File fichier;
 Adafruit_BME280 bme;
 RTC_DS3231 rtc;
@@ -41,26 +42,55 @@ long derniereExecutionEco=0;
 
 
 String Mesure() {
-  // Manque le timeout
   String message;
   char temps[10];
-  sprintf(temps, "%02d:%02d.%02d  ", rtc.now().hour(), rtc.now().minute(), rtc.now().second());
+  DateTime date=rtc.now();
+  sprintf(temps, "%02d:%02d.%02d  ", date.hour(), date.minute(), date.second());
   message = String(temps);
-  message+="Temperature: "+String(bme.readTemperature())+"°C  ";
-  message+=" Humidite: "+String(bme.readHumidity())+"%  ";
-  if (mode!=4){
-    message+=" Pression: "+String(bme.readPressure()/100)+" hPa ";
-    message+=" Luminosite: "+String(analogRead(A0));
+
+  long debut = millis();
+  long max=variables.TIMEOUT*1000;
+  while (!bme.begin(0x76) && millis() - debut < max) {};
+  if (millis() - debut >= max) {
+    message += F("Temperature: NA  ");
+    message += F("Humidite: NA  ");
+  } else {
+    message += "Temperature: " + String(bme.readTemperature()) + "°C  ";
+    message += "Humidite: " + String(bme.readHumidity()) + "%  ";
   }
+
+  if (mode != 4) {
+    while (!bme.begin(0x76) && millis() - debut < max) {};
+    if (millis() - debut >= max) {
+      message += F("Pression: NA  ");
+    } else {
+      message += "Pression: " + String(bme.readPressure() / 100) + " hPa  ";
+    }
+
+    debut = millis();
+    while (analogRead(1) == 0 && millis() - debut < max) {};
+    if (millis() - debut >= max) {
+      message += F("Luminosite: NA");
+    } else {
+      message += "Luminosite: " + String(analogRead(1));
+    }
+  }
+
   return message;
 }
+
 void Enregistrement(String message) {
-  // Manque le file_max_size et revision
   DateTime date=rtc.now();
   int revision=0;
   char nomFichier[20];
-  sprintf(nomFichier, "%04d%02d%02d.LOG", date.year(), date.month(), date.day());
-  fichier = SD.open(nomFichier, FILE_WRITE);
+  sprintf(nomFichier, "%04d%02d%02d_%d.LOG", date.year(), date.month(), date.day(),revision);
+  fichier.open(nomFichier, FILE_WRITE);
+  while(fichier.fileSize()+message.length()>=variables.FILE_MAX_SIZE){
+    fichier.close();
+    revision++;
+    sprintf(nomFichier, "%04d%02d%02d_%d.LOG", date.year(), date.month(), date.day(),revision);
+    fichier.open(nomFichier, FILE_WRITE);
+  }
   if (fichier) {
     Serial.println(F("Enregistrement dans "));
     Serial.println(nomFichier);
@@ -75,7 +105,7 @@ void ModeStandard(){
   mode=1;
   Serial.println(F("Mode Standard"));
   String log = Mesure();
-  Serial.println(log); // A enlever
+  Serial.println(log); // Pour la demonstration
   Enregistrement(Mesure());
   derniereExecutionStandard=millis();
 }
@@ -83,7 +113,7 @@ void ModeStandard(){
 void ResetEEPROM() {
   struct variables{
   long LOG_INTERVAL=10;
-  int FILE_MAX_SIZE=4096;
+  int FILE_MAX_SIZE=2048;
   byte TIMEOUT=30;
   byte LUMIN=1;
   int LUMIN_LOW=255;
@@ -103,7 +133,7 @@ void ResetEEPROM() {
 }
 
 void ModeConfiguration() {
-  //Manque le retour au bout de 30 minutes
+  long debut = millis();
   mode = 2;
   Serial.println(F("Mode Configuration"));
   const __FlashStringHelper* listeCommandes[] = {
@@ -111,9 +141,8 @@ void ModeConfiguration() {
     F("TEMP_AIR"), F("MIN_TEMP_AIR"), F("MAX_TEMP_AIR"), F("HYGR"), F("HYGR_MINT"), F("HYGR_MAXT"),
     F("PRESSURE"), F("PRESSURE_MIN"), F("PRESSURE_MAX"), F("HEURE"),F("MINUTE"),F("SECONDE"),F("MOIS"),F("JOUR"),F("ANNEE"),F("JOUR_SEMAINE"),F("RESET")};
 
-  // Trop couteux en mémoire
-  //const int min[23] = {1, 512, 1, 0, 0, 0, 0, -40, -40, 0, -40, -40, 0, 300, 300, 0, 0, 0, 1, 1, 2000, 1, 0};
-  //const int max[23] = {60, 8192, 60, 1, 1023, 1023, 1, 85, 85, 1, 85, 85, 1, 1100, 1100, 23, 59, 59, 12, 31, 2099, 7, 1};
+  const int min[23] = {1, 512, 1, 0, 0, 0, 0, -40, -40, 0, -40, -40, 0, 300, 300, 0, 0, 0, 1, 1, 2000, 1, 0};
+  const int max[23] = {60, 8192, 60, 1, 1023, 1023, 1, 85, 85, 1, 85, 85, 1, 1100, 1100, 23, 59, 59, 12, 31, 2099, 7, 1};
 
   for (int i = 0; i < 23; i++) {
     Serial.print(i + 1);
@@ -121,21 +150,37 @@ void ModeConfiguration() {
     Serial.println(listeCommandes[i]);
   }
 
-  while (!Serial.available()) {}
+  while (!Serial.available()) {
+    if (millis() - debut > 30UL * 60UL * 1000UL) {
+      mode = 1;
+      EEPROM.get(adresseEEPROM, variables);
+      return;
+    }
+  }
+  long debut = millis();
+
   String entree = Serial.readStringUntil('\n');
   int numeroCommande = entree.toInt();
 
   Serial.print(F("Entrez la nouvelle valeur pour "));
   Serial.println(listeCommandes[numeroCommande - 1]);
 
-  while (!Serial.available()) {}
+  while (!Serial.available()) {
+    if (millis() - debut > 30UL * 60UL * 1000UL) {
+      mode = 1;
+      EEPROM.get(adresseEEPROM, variables);
+      return;
+    }
+  }
+  long debut = millis();
+
   entree = Serial.readStringUntil('\n');
   int nouvelleValeur = entree.toInt();
 
-  //if (nouvelleValeur < min[numeroCommande - 1] || nouvelleValeur > max[numeroCommande - 1]) {
-  //  Serial.println(F("Valeur hors du domaine de définition"));
-  //  return;
-  //}
+  if (nouvelleValeur < min[numeroCommande - 1] || nouvelleValeur > max[numeroCommande - 1]) {
+    Serial.println(F("Valeur hors du domaine de définition"));
+    return;
+  }
 
   DateTime temps = rtc.now();
 
@@ -232,7 +277,7 @@ void ModeEco(){
   mode=4;
   Serial.println(F("Mode Eco"));
   String log = Mesure();
-  Serial.println(log); // A enlever
+  Serial.println(log); // Pour la demonstration
   Enregistrement(log);
   derniereExecutionEco=millis();
 }
@@ -278,6 +323,37 @@ void InitInterrupt() {
     attachInterrupt(digitalPinToInterrupt(boutonVert), BasculeVert, CHANGE);
 }
 
+void clignoterLed(int r1,int g1,int b1,int r2,int g2,int b2){
+  led.setColorRGB(0, r1, g1, b1);
+  delay(1000);
+  led.setColorRGB(0, r2, g2, b2);
+  delay(1000);
+}
+
+void verificationCapteurs(){
+  if (!bme.begin(0x76)) {
+    Serial.println(F("Erreur initialisation BME280"));
+    while(1){
+      clignoterLed(255,0,0,0,255,0);
+    };
+  }
+  if (!SD.begin(4)) {
+    Serial.println(F("Erreur Initialisation carte SD"));
+    while (1){
+      clignoterLed(255,0,0,255,255,255);
+    };
+  }
+  if (!rtc.begin()) {
+    Serial.println(F("Erreur Initialisation Horloge RTC"));
+    while (1){
+      clignoterLed(255,0,0,0,0,255);
+    };
+  }
+  if (rtc.lostPower()) {
+    rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   Serial.println(F("Demarrage"));
@@ -289,26 +365,11 @@ void setup() {
   if (digitalRead(boutonRouge) == LOW) {
     mode = 2;
   }
-  if (!bme.begin(0x76)) {
-    Serial.println(F("Erreur initialisation BME280"));
-    while(1);
-  }
-  if (!SD.begin(4)) {
-    Serial.println(F("Erreur Initialisation carte SD"));
-    while (1);
-  }
-  if (!rtc.begin()) {
-    Serial.println(F("Erreur Initialisation Horloge RTC"));
-    while (1);
-  }
-  if (rtc.lostPower()) {
-    rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
-  }
+  verificationCapteurs();
 }
 
 void loop() {
-  // Manque la gestion des erreurs et la LED
-  // Manque l'exploitation des variables
+  verificationCapteurs();
   switch (mode)
   {
   case 1:
