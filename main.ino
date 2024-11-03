@@ -157,7 +157,7 @@ void ModeConfiguration() {
       return;
     }
   }
-  long debut = millis();
+ debut = millis();
 
   String entree = Serial.readStringUntil('\n');
   int numeroCommande = entree.toInt();
@@ -172,7 +172,7 @@ void ModeConfiguration() {
       return;
     }
   }
-  long debut = millis();
+   debut = millis();
 
   entree = Serial.readStringUntil('\n');
   int nouvelleValeur = entree.toInt();
@@ -285,6 +285,7 @@ unsigned long temps_appui_rouge = 0;
 
 void BasculeRouge() {
   if (millis() - temps_appui_rouge > 100) {
+    delay(100);
     if (digitalRead(boutonRouge) == LOW) {
       temps_appui_rouge = millis();
     } else{
@@ -306,6 +307,7 @@ unsigned long temps_appui_vert = 0;
 
 void BasculeVert() {
   if (millis() - temps_appui_vert > 100) {
+    delay(100);
     if (digitalRead(boutonVert)==LOW) {
       temps_appui_vert = millis();
     } else {
