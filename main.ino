@@ -1,3 +1,4 @@
+// Importation des librairies
 #include <SdFat.h>
 #include <Adafruit_BME280.h>
 #include <RTClib.h>
@@ -16,6 +17,7 @@ Adafruit_BME280 bme;
 RTC_DS3231 rtc;
 ChainableLED led(ledPin1,ledPin2,1);
 
+// Initialisation de la structure variables
 struct variables
 { long LOG_INTERVAL;
   int FILE_MAX_SIZE;
@@ -34,22 +36,22 @@ struct variables
   int PRESSURE_MAX;
 }variables;
 
-int mode=1;
+int mode=1; // 1: Standard, 2: Configuration, 3: Maintenance, 4: Eco
 
 long derniereExecutionStandard=0;
 long derniereExecutionMaintenance=0;
 long derniereExecutionEco=0;
 
-
+// Capture des données des différents capteurs et création du message
 String Mesure() {
   String message;
   char temps[10];
   DateTime date=rtc.now();
   sprintf(temps, "%02d:%02d.%02d  ", date.hour(), date.minute(), date.second());
-  message = String(temps);
+  message = String(temps); // Ajout de l'heure dans le message
 
-  long debut = millis();
-  long max=variables.TIMEOUT*1000;
+  long debut = millis(); // Mesure du temps d'exécution
+  long max=variables.TIMEOUT*1000; // Temps max avant de passer à un autre capteur
   while (!bme.begin(0x76) && millis() - debut < max) {};
   if (millis() - debut >= max) {
     message += F("Temperature: NA  ");
@@ -59,7 +61,7 @@ String Mesure() {
     message += "Humidite: " + String(bme.readHumidity()) + "%  ";
   }
 
-  if (mode != 4) {
+  if (mode != 4) { // Si le mode n'est pas éco
     while (!bme.begin(0x76) && millis() - debut < max) {};
     if (millis() - debut >= max) {
       message += F("Pression: NA  ");
@@ -79,19 +81,20 @@ String Mesure() {
   return message;
 }
 
+// Enregistrement des données dans un fichier
 void Enregistrement(String message) {
   DateTime date=rtc.now();
   int revision=0;
   char nomFichier[20];
-  sprintf(nomFichier, "%04d%02d%02d_%d.LOG", date.year(), date.month(), date.day(),revision);
+  sprintf(nomFichier, "%04d%02d%02d_%d.LOG", date.year(), date.month(), date.day(),revision); // Nom du fichier contenant la date et le numéro de révision
   fichier.open(nomFichier, FILE_WRITE);
-  while(fichier.fileSize()+message.length()>=variables.FILE_MAX_SIZE){
+  while(fichier.fileSize()+message.length()>=variables.FILE_MAX_SIZE){ // Si la taille du fichier dépasse la taille maximale
     fichier.close();
     revision++;
     sprintf(nomFichier, "%04d%02d%02d_%d.LOG", date.year(), date.month(), date.day(),revision);
     fichier.open(nomFichier, FILE_WRITE);
   }
-  if (fichier) {
+  if (fichier) { // Si le fichier est ouvert
     Serial.println(F("Enregistrement dans "));
     Serial.println(nomFichier);
     fichier.println(message);
@@ -106,11 +109,11 @@ void ModeStandard(){
   Serial.println(F("Mode Standard"));
   String log = Mesure();
   Serial.println(log); // Pour la demonstration
-  Enregistrement(Mesure());
+  Enregistrement(log);
   derniereExecutionStandard=millis();
 }
 
-void ResetEEPROM() {
+void ResetEEPROM() { // Réinitialisation des valeurs de la mémoire EEPROM
   struct variables{
   long LOG_INTERVAL=10;
   int FILE_MAX_SIZE=2048;
@@ -132,8 +135,8 @@ void ResetEEPROM() {
 
 }
 
-void ModeConfiguration() {
-  long debut = millis();
+void ModeConfiguration() { 
+  long debut = millis(); // Mesure du temps d'exécution
   mode = 2;
   Serial.println(F("Mode Configuration"));
   const __FlashStringHelper* listeCommandes[] = {
@@ -141,17 +144,15 @@ void ModeConfiguration() {
     F("TEMP_AIR"), F("MIN_TEMP_AIR"), F("MAX_TEMP_AIR"), F("HYGR"), F("HYGR_MINT"), F("HYGR_MAXT"),
     F("PRESSURE"), F("PRESSURE_MIN"), F("PRESSURE_MAX"), F("HEURE"),F("MINUTE"),F("SECONDE"),F("MOIS"),F("JOUR"),F("ANNEE"),F("JOUR_SEMAINE"),F("RESET")};
 
-  const int min[23] = {1, 512, 1, 0, 0, 0, 0, -40, -40, 0, -40, -40, 0, 300, 300, 0, 0, 0, 1, 1, 2000, 1, 0};
-  const int max[23] = {60, 8192, 60, 1, 1023, 1023, 1, 85, 85, 1, 85, 85, 1, 1100, 1100, 23, 59, 59, 12, 31, 2099, 7, 1};
 
-  for (int i = 0; i < 23; i++) {
+  for (int i = 0; i < 23; i++) { // Affichage des commandes
     Serial.print(i + 1);
     Serial.print(F(": "));
     Serial.println(listeCommandes[i]);
   }
 
   while (!Serial.available()) {
-    if (millis() - debut > 30UL * 60UL * 1000UL) {
+    if (millis() - debut > 30UL * 60UL * 1000UL) { // Retour au mode standard après 30 minutes d'inactivité
       mode = 1;
       EEPROM.get(adresseEEPROM, variables);
       return;
@@ -177,14 +178,10 @@ void ModeConfiguration() {
   entree = Serial.readStringUntil('\n');
   int nouvelleValeur = entree.toInt();
 
-  if (nouvelleValeur < min[numeroCommande - 1] || nouvelleValeur > max[numeroCommande - 1]) {
-    Serial.println(F("Valeur hors du domaine de définition"));
-    return;
-  }
 
   DateTime temps = rtc.now();
 
-  switch (numeroCommande) {
+  switch (numeroCommande) {// Modification des valeurs des variables en fonction de la commande choisie
     case 1:
       variables.LOG_INTERVAL = nouvelleValeur; 
       break;
@@ -262,7 +259,7 @@ void ModeConfiguration() {
     default: 
       Serial.println(F("Erreur de saisie"));
   }
-  EEPROM.put(adresseEEPROM, variables);
+  EEPROM.put(adresseEEPROM, variables); // Enregistrement des nouvelles valeurs dans la mémoire EEPROM
 }
 
 void ModeMaintenance(){
@@ -283,29 +280,29 @@ void ModeEco(){
 }
 unsigned long temps_appui_rouge = 0;
 
-void BasculeRouge() {
+void BasculeRouge() { // Fonction executee par l'interruption du bouton rouge
   if (millis() - temps_appui_rouge > 100) {
     delay(100);
-    if (digitalRead(boutonRouge) == LOW) {
-      temps_appui_rouge = millis();
-    } else{
-      if (millis() - temps_appui_rouge > 5000) {
-        if (mode == 1) {
-            mode=3;
+    if (digitalRead(boutonRouge) == LOW) { // Si le bouton est pressé
+      temps_appui_rouge = millis(); // On enregistre le temps
+    } else{ // Si le bouton est relâché
+      if (millis() - temps_appui_rouge > 5000) { // Si le bouton a été pressé pendant 5 secondes
+        if (mode == 1) { // Si le mode est standard
+            mode=3; // Passage en mode maintenance
         }
-        else if (mode == 3 || mode == 4) {
-            mode=1;
+        else if (mode == 3 || mode == 4) { // Si le mode est maintenance ou éco
+            mode=1; // Passage en mode standard
             derniereExecutionStandard=0;
         }
       }
-      temps_appui_rouge = millis();
+      temps_appui_rouge = millis(); 
     }
   }
 }
 
 unsigned long temps_appui_vert = 0;
 
-void BasculeVert() {
+void BasculeVert() {// Fonction executee par l'interruption du bouton vert
   if (millis() - temps_appui_vert > 100) {
     delay(100);
     if (digitalRead(boutonVert)==LOW) {
@@ -320,19 +317,19 @@ void BasculeVert() {
   }
 }
 
-void InitInterrupt() {
+void InitInterrupt() { // Initialisation des interruptions
     attachInterrupt(digitalPinToInterrupt(boutonRouge), BasculeRouge, CHANGE);
     attachInterrupt(digitalPinToInterrupt(boutonVert), BasculeVert, CHANGE);
 }
 
-void clignoterLed(int r1,int g1,int b1,int r2,int g2,int b2){
+void clignoterLed(int r1,int g1,int b1,int r2,int g2,int b2){ // Clignotement de la led avec les couleurs choisies
   led.setColorRGB(0, r1, g1, b1);
   delay(1000);
   led.setColorRGB(0, r2, g2, b2);
   delay(1000);
 }
 
-void verificationCapteurs(){
+void verificationCapteurs(){ // Vérification de l'initialisation des capteurs
   if (!bme.begin(0x76)) {
     Serial.println(F("Erreur initialisation BME280"));
     while(1){
@@ -356,28 +353,28 @@ void verificationCapteurs(){
   }
 }
 
-void setup() {
+void setup() { // Initialisation des capteurs et des interruptions
   Serial.begin(9600);
   Serial.println(F("Demarrage"));
   led.init();
-  EEPROM.get(adresseEEPROM, variables);
+  EEPROM.get(adresseEEPROM, variables); // Récupération des variables dans l'EEPROM
   pinMode(boutonRouge, INPUT_PULLUP);
   pinMode(boutonVert, INPUT_PULLUP);
   InitInterrupt();
-  if (digitalRead(boutonRouge) == LOW) {
-    mode = 2;
+  if (digitalRead(boutonRouge) == LOW) { // Si le bouton rouge est pressé au démarrage
+    mode = 2; // Passage en mode configuration
   }
   verificationCapteurs();
 }
 
 void loop() {
   verificationCapteurs();
-  switch (mode)
+  switch (mode) // Execution du mode en fonction de la valeur de mode
   {
   case 1:
-    if (derniereExecutionStandard == 0 || millis() - derniereExecutionStandard > variables.LOG_INTERVAL*60*1000) {
-      led.setColorRGB(0, 0, 255, 0);
-      ModeStandard();
+    if (derniereExecutionStandard == 0 || millis() - derniereExecutionStandard > variables.LOG_INTERVAL*60*1000) { // Si le mode standard n'a pas été exécuté depuis LOG_INTERVAL minutes
+      led.setColorRGB(0, 0, 255, 0); // LED VERTE
+      ModeStandard(); // Execution du mode standard
     }
     break;
   case 2:
